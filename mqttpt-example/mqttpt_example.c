@@ -1250,9 +1250,10 @@ int mqttpt_receive_write_handler(const connection_id_t *connection,
                                  void* userdata)
 {
     unsigned char set_point_value[10];
-    strncpy(set_point_value,value,value_size);
-    set_point_value[value_size] = '\0';
-   
+    unsigned char final[100];
+    sprintf(final,"mosquitto_pub -t 'inTopic/%s' -m '%c'",device_id,value[0]);
+    system(final);
+
     return 0;
 }
 
@@ -1370,33 +1371,32 @@ void mqttpt_translate_node_value_message(struct mosquitto *mosq,
 		char device_value_env[50];// = json_string_value(json_array_get(payload_field, 1));
 
         //strcpy(final_device_name,"arm_");
-        //strcat(final_device_name,json_string_value(json_array_get(payload_field, 0)));
+        //strcpy(final_device_name,json_string_value(json_array_get(payload_field, 0)));
 	//	strcat(final_device_name,"_");
 
-        if (!pt_device_exists(g_connection_id, final_device_name)) {
+            
+		
+		for(index=0;index<payload_field_size;index++)
+		{
+
+			//strcat(final_device_name,json_string_value(json_array_get(payload_field, 0)));
+			sscanf(json_string_value(json_array_get(payload_field, index)),"%s %s",final_device_name,device_value_env);
+        		if (!pt_device_exists(g_connection_id, final_device_name)) {
 				pt_status_t status = pt_device_create(g_connection_id, final_device_name, MQTTPT_DEFAULT_LIFETIME, NONE);
 				if (status != PT_STATUS_SUCCESS) {
 				tr_err("Could not create a device %s error code: %d", final_device_name, (int32_t) status);
 				return;
-                }
-        }
-            
-		
-		for(index=1;index<payload_field_size;index++)
-		{
-
-			//strcat(final_device_name,json_string_value(json_array_get(payload_field, 0)));
-			sscanf(json_string_value(json_array_get(payload_field, index)),"%s %s",device_name_env,device_value_env);
+                	}
+        		}
 			//strcat(final_device_name,device_name_env);
-	        device_name = device_name_env;
             device_status = device_value_env;
             value = device_value_env;
 
-	        if(strcmp(device_name_env,"humidity")==0)
+	        if(strcmp(final_device_name,"humidity")==0)
 			{
 				object_id = HUMIDITY_SENSOR;
 			}
-			else if(strcmp(device_name_env,"temp")==0 || strcmp(device_name_env,"temperature")==0)
+			else if(strcmp(final_device_name,"temp")==0 || strcmp(final_device_name,"temperature")==0)
 			{
 				object_id = TEMPERATURE_SENSOR;
 			}
@@ -1405,15 +1405,15 @@ void mqttpt_translate_node_value_message(struct mosquitto *mosq,
                 continue;
             }
 		
-		   if (!pt_device_resource_exists(g_connection_id, device_name, object_id, 0, resource_id)) {
+		   if (!pt_device_resource_exists(g_connection_id, final_device_name, object_id, 0, resource_id)) {
 				   //If temperature or humidity, create sensor
 				   tr_info("Creating sensor.");
-				   mqttpt_create_sensor_object(g_connection_id, device_name, object_id, object_instance, value);
+				   mqttpt_create_sensor_object(g_connection_id, final_device_name, object_id, object_instance, value);
 				   //ipso_create_set_point_mqtt(g_connection_id,device_name,object_instance,value,mqttpt_receive_write_handler);
 			   }
 			
 			pt_device_set_resource_value(g_connection_id,
-								 device_name,
+								 final_device_name,
 								 object_id,
 								 object_instance,
 								 resource_id,
@@ -1486,6 +1486,24 @@ void mqttpt_translate_node_value_message(struct mosquitto *mosq,
 
     }//light
     
+    if (payload_field_size > 0) {
+		char* deveui_ctx = strdup(device_name);
+		if (mqttpt_device_exists(device_name)) {
+			tr_info("Updating the changed object structure %s\n", deveui_ctx);
+			pt_device_write_values(g_connection_id,
+								   device_name,
+								   mqttpt_update_object_structure_success_handler,
+								   mqttpt_update_object_structure_failure_handler,
+								   deveui_ctx);
+		} else {
+			tr_info("Registering device %s\n", deveui_ctx);
+			pt_device_register(g_connection_id,
+							   device_name,
+							   mqttpt_device_register_success_handler,
+							   mqttpt_device_register_failure_handler,
+							   deveui_ctx);
+		}
+	}
 
 
     json_decref(json);
@@ -1840,7 +1858,7 @@ int main(int argc, char *argv[])
     mosquitto_subscribe_callback_set(mosq, mqtt_subscribe_callback);
 
     if(mosquitto_connect(mosq, args.mosquitto_host,
-                         atoi(args.mosquitto_port),
+                         1883,
                          atoi(args.keep_alive))){
         tr_err("Unable to connect.");
         return 1;

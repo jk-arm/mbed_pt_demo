@@ -1858,7 +1858,7 @@ int main(int argc, char *argv[])
     mosquitto_subscribe_callback_set(mosq, mqtt_subscribe_callback);
 
     if(mosquitto_connect(mosq, args.mosquitto_host,
-                         1883,
+                         atoi(args.mosquitto_port),
                          atoi(args.keep_alive))){
         tr_err("Unable to connect.");
         return 1;

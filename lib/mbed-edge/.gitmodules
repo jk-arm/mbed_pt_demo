@@ -1,0 +1,12 @@
+[submodule "lib/jansson/jansson"]
+	path = lib/jansson/jansson
+	url = https://github.com/akheron/jansson
+[submodule "lib/libevent/libevent"]
+	path = lib/libevent/libevent
+	url = https://github.com/libevent/libevent
+[submodule "lib/libwebsockets/libwebsockets"]
+	path = lib/libwebsockets/libwebsockets
+	url = https://github.com/ARMmbed/libwebsockets.git
+[submodule "lib/mbedtls"]
+	path = lib/mbedtls
+	url = https://github.com/ARMmbed/mbedtls

@@ -1251,7 +1251,7 @@ int mqttpt_receive_write_handler(const connection_id_t *connection,
 {
     unsigned char set_point_value[10];
     unsigned char final[100];
-    sprintf(final,"mosquitto_pub -t 'inTopic/%s' -m '%c'",device_id,value[0]);
+    sprintf(final,"mosquitto_pub -t inTopic/'%s' -m '%c'",device_id,value[0]);
     system(final);
 
     return 0;
